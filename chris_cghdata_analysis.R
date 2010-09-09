@@ -122,7 +122,7 @@ plotRawCghRegionGenes <- function (start, end, chromosome, dataSet, mart, sample
 
 ## -------------------------------------------------------------------
 plotRawCghDotPlot <- function (KCdataSet, mirrorLocs, samples=1, doFilter=F, filterSize=10, 
-chromosomes=NA, setcex=1) {
+chromosomes=NA, setcex=1, plotTitle=NA) {
 
 
 # First remove missing values
@@ -169,8 +169,10 @@ chromosomes=NA, setcex=1) {
 	else {
 		dataRange <- range(KCdataSet[,samples+2])
 	}
-	
-	plot(c(0, max(maplocLin)), dataRange,type='n', xlab='Genomic Position (bp)', ylab='log2', main=colnames(KCdataSet)[samples+2])
+	if (is.na(plotTitle)) {
+    plotTitle=colnames(KCdataSet)[samples+2]
+  }
+	plot(c(0, max(maplocLin)), dataRange,type='n', xlab='Genomic Position (bp)', ylab='log2', main=plotTitle)
 
 
 	
