@@ -120,7 +120,7 @@ plotRawCghRegionGenes <- function (start, end, chromosome, dataSet, mart, sample
 	}	
 }
 
-## -------------------------------------------------------------------
+# -------------------------------------------------------------------
 plotRawCghDotPlot <- function (KCdataSet, mirrorLocs, samples=1, doFilter=F, filterSize=10, 
 chromosomes=NA, setcex=1, plotTitle=NA) {
 
@@ -193,16 +193,26 @@ chromosomes=NA, setcex=1, plotTitle=NA) {
 
 }
 
+# -------------------------------------------------------------------
+exportCNformat <- function (KCdataSet, fileName = 'KCdata.cn') {
+  
+  # Export a KC data frame as a CN data file
+  
+  # Print the header line
+  
+  sampsText <- paste(colnames(KCdataSet)[3:ncol(KCdataSet)], collapse='\t')
+  header <- paste('SNP', 'Chromosome', 'PhysicalPosition', sampsText, sep='\t')
+  
+  if (is.numeric(KCdataSet$chrom)) {
+    KCdataSet$chrom <- as.character(KCdataSet$chrom)
+    KCdataSet$chrom <- gsub('20', 'X', KCdataSet$chrom)
+    KCdataSet$chrom <- gsub('21', 'Y', KCdataSet$chrom)
+  }
+
+  # Write data to file - header first
+  cat(file=fileName, header, append=F)
+  cat(file=fileName, '\n', append=T)
+  write.table(x=KCdataSet, file=fileName, col.names=F, quote=F, append=T, sep='\t')
 
 
-
-
-
-
-
-
-
-
-
-
-
+}
