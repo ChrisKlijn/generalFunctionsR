@@ -194,9 +194,13 @@ chromosomes=NA, setcex=1, plotTitle=NA) {
 }
 
 # -------------------------------------------------------------------
-exportCNformat <- function (KCdataSet, fileName = 'KCdata.cn') {
+exportCNformat <- function (KCdataSet, fileName = 'KCdata.cn', species='mouse') {
   
   # Export a KC data frame as a CN data file
+  
+  if (!(species == 'mouse' | species == 'human')) {
+    stop('species must be either mouse or human')
+  }
   
   # Print the header line
   
@@ -205,8 +209,14 @@ exportCNformat <- function (KCdataSet, fileName = 'KCdata.cn') {
   
   if (is.numeric(KCdataSet$chrom)) {
     KCdataSet$chrom <- as.character(KCdataSet$chrom)
-    KCdataSet$chrom <- gsub('20', 'X', KCdataSet$chrom)
-    KCdataSet$chrom <- gsub('21', 'Y', KCdataSet$chrom)
+    if (species == 'mouse') {
+      KCdataSet$chrom <- gsub('20', 'X', KCdataSet$chrom)
+      KCdataSet$chrom <- gsub('21', 'Y', KCdataSet$chrom)
+    }
+    if (species == 'human') {
+      KCdataSet$chrom <- gsub('23', 'X', KCdataSet$chrom)
+      KCdataSet$chrom <- gsub('24', 'Y', KCdataSet$chrom)
+    }
   }
 
   # Write data to file - header first
