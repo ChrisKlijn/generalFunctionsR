@@ -122,7 +122,7 @@ plotRawCghRegionGenes <- function (start, end, chromosome, dataSet, mart, sample
 
 # -------------------------------------------------------------------
 plotRawCghDotPlot <- function (KCdataSet, mirrorLocs, samples=1, doFilter=F, filterSize=10, 
-chromosomes=NA, setcex=1, plotTitle=NA, setylim=NULL) {
+chromosomes=NA, setcex=1, plotTitle=NA, setylim=NULL, filterType='median') {
 
 
 # First remove missing values
@@ -163,8 +163,15 @@ chromosomes=NA, setcex=1, plotTitle=NA, setylim=NULL) {
 ## Use a running mean filter if selected, with supplied (or standard)
 ## filter size
 	if (doFilter) {
-		filteredData <- filter(KCdataSet[,samples+2], rep(1, filterSize)/filterSize)
-		dataRange <- range(filteredData[!is.na(filteredData)])
+    # any alternative input to filterType will do a running mean instead of a running median
+		if (filterType == 'median') {
+      filteredData <- runmed(KCdataSet[,samples+2], filterSize + !(filterSize %% 2))
+      dataRange <- range(filteredData[!is.na(filteredData)])
+    }
+    else {
+      filteredData <- filter(KCdataSet[,samples+2], rep(1, filterSize)/filterSize)
+      dataRange <- range(filteredData[!is.na(filteredData)])
+    }
 	}
 	else {
 		dataRange <- range(KCdataSet[,samples+2])
@@ -182,14 +189,21 @@ chromosomes=NA, setcex=1, plotTitle=NA, setylim=NULL) {
 	
 	for (i in 1:length(uniqChroms)) {
 		if (doFilter) {
-			points(maplocLin[KCdataSet$chrom == uniqChroms[i]], filter(KCdataSet[KCdataSet$chrom == uniqChroms[i],samples+2], 
-				rep(1, filterSize)/filterSize), col=chromCols[uniqChroms[i]], pch='.', cex=setcex)
-		}
+			if (filterType == 'median') {
+        points(maplocLin[KCdataSet$chrom == uniqChroms[i]], runmed(KCdataSet[KCdataSet$chrom == uniqChroms[i],samples+2], 
+          filterSize + !(filterSize %% 2)), col=chromCols[uniqChroms[i]], pch='.', cex=setcex)
+      }  
+      else {
+        points(maplocLin[KCdataSet$chrom == uniqChroms[i]], filter(KCdataSet[KCdataSet$chrom == uniqChroms[i],samples+2], 
+          rep(1, filterSize)/filterSize), col=chromCols[uniqChroms[i]], pch='.', cex=setcex)
+      }
+    }
 		else {
 			points(maplocLin[KCdataSet$chrom == uniqChroms[i]], KCdataSet[KCdataSet$chrom == uniqChroms[i],samples+2], 
 				col=chromCols[uniqChroms[i]], pch='.', cex=setcex)
 		}
 	}
+  
 	abline(v=chromEnds, col=colors()[615])
 	abline(h=0, col='black')
 	textX <- chromEnds - (unlist(lapply(mirrorLocs, max)))/2
