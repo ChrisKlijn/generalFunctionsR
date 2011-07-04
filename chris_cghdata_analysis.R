@@ -244,3 +244,129 @@ exportCNformat <- function (KCdataSet, fileName = 'KCdata.cn', species='mouse') 
 
 
 }
+
+# -------------------------------------------------------------------
+plotRangeCGH <- function (ROI, KC, mouseGenes, mouseGenesRanges=NULL, samples=NULL) {
+	
+  # Function to plot CGH data in a number regions of interest together with the genes in that regions.
+  # Still optimising
+  # 
+  # inputs:
+  #
+  # ROI - GRanges object containing regions of interest
+  # KC - KC dataset
+  # mouseGenes - mouse gene annotation downloaded from UCSC using getMouseGenesUCSC in 
+  #              chris_get_annotations.R
+  # 
+  # To Do:
+  # - Warnings and exits for situations where the interval doesn't contain genes or CGH probes
+  # - Now it just dumps plots for each sample for each ROI. Some way to export more efficiently would be
+  #   nice but a large pdf is okay for now
+  # - Somehow don't require the mouse gene input?
+  
+  require(rtracklayer)
+  require(GenomicRanges)
+  require(IRanges)
+  
+  # Find gene overlaps
+  
+  if (is.null(mouseGenesRanges)) {
+    mouseGenesRanges <- GRangesForUCSCGenome(chrom=mouseGenes$chrom, 
+      ranges=IRanges(start=mouseGenes$txStart, end=mouseGenes$txEnd), 
+      names=mouseGenes$name2, genome='mm9')
+  }
+  
+  geneOverlap <- findOverlaps(mouseGenesRanges, ROI, type='within')
+  
+  if (is.numeric(KC$chrom)) {
+    KC$chrom <- as.character(KC$chrom)
+    KC$chrom <- paste('chr', gsub('20', 'X', KC$chrom), sep='')
+  }
+  
+  # Remove probes mapped beyond the annotated sequence lengths of the chromosome
+  
+  KC <- KC[!(KC$maploc > seqlengths(ROI)[KC$chrom]),]
+    
+  # Generate a ranges object for all CGH probes
+  
+  CGHranges <- GRangesForUCSCGenome(chrom=KC$chrom, 
+      ranges=IRanges(start=KC$maploc, width=60), genome='mm9')
+  
+  # Find overlapping CGH probes
+  
+  CGHoverlap <- findOverlaps(CGHranges, ROI, type='within')
+  
+  # Transform the overlaps into a list, where each element corresponds to a ROI
+  overlapListGenes <- split(as.data.frame(geneOverlap@matchMatrix), f=geneOverlap@matchMatrix[,'subject'])
+  overlapListCGH <- split(as.data.frame(CGHoverlap@matchMatrix), f=CGHoverlap@matchMatrix[,'subject'])
+  
+  # Sample numbers to column numbers
+  if (is.null(samples)) {
+    samples <- 3:ncol(KC)
+  }
+  else {
+    samples <- samples+2
+  }
+    
+  for (i in 1:length(ROI)) {
+    
+    # Get genes to plot and CGH probes to plot
+    tempGenes <- mouseGenes[overlapListGenes[[i]]$query,]
+    KCregion <- KC[overlapListCGH[[i]]$query,]
+    
+    # We want to get rid of duplicated genes, but keep the longest coding sequence. Therefore
+    # we first order all genes on coding sequence length and call 'duplicated' which will report
+    # FALSE for all first unique occurrences, and TRUE for subsequent duplicates. This way we will
+    # always retain the longest coding sequence
+    
+    tempGenes <- tempGenes[order(abs(tempGenes$cdsStart-tempGenes$cdsEnd), decreasing=T),]
+    tempGenes <- tempGenes[which(!duplicated(tempGenes$name2)),]
+    
+    # Plot for each sample
+    
+    for (s in samples) {    
+    
+      # use 20% of vertical space to draw the genes - top 10% for +strand genes and bottom 10% for 
+      # - strand genes
+      maxPrct <- max(abs(KCregion[,s]))
+      maxPrct <- maxPrct * 1.1 # 10 % plotbuffer
+      maxPrct <- max(maxPrct, .5) # minimally .5/-.5 ylim
+      
+      plotTitle <- paste('CGH data for sample', colnames(KCregion)[s], unique(KCregion$chrom), 'from',
+       min(KCregion$maploc), 'to', max(KCregion$maploc))
+      
+      plot(KCregion$maploc, KCregion[,s], type='n', ylim=c(-maxPrct*2, maxPrct), xaxt='n', bty='n',
+        ylab='Log2 Tumor/Reference', xlab=NA, main=plotTitle)
+      abline(h=0, col=colors()[192])
+      points(KCregion$maploc, KCregion[,s], pch=19, cex=.5,)
+            
+      # Gene plotting
+      
+      plotwidth <- max(KCregion$maploc) - min(KCregion$maploc)
+          
+      for (j in 1:nrow(tempGenes)) {
+  
+        exonStarts <- as.integer(strsplit(tempGenes$exonStarts[j], ',')[[1]])
+        exonEnds <- as.integer(strsplit(tempGenes$exonEnds[j], ',')[[1]])
+       
+        if (tempGenes$strand[j] == '+') {
+          plotY <- c(-maxPrct*1.1, -maxPrct)
+          textX <- exonStarts[1] - .01*plotwidth
+          textAdj <- c(1, 0.5)
+        }
+        else {
+          plotY <- c(-maxPrct*1.3, -maxPrct*1.2)
+          textX <- tail(exonEnds, n=1) + .01*plotwidth
+          textAdj <- c(0, 0.5)
+        }
+        
+        # Draw the exons
+        rect(exonStarts, plotY[2], exonEnds, plotY[1], col='black')
+        lines(x=c(exonStarts[1],tail(exonEnds, n=1)), 
+          y=c(mean(plotY), mean(plotY)), col='black')
+        # Gene Name
+        text(x=textX, y=mean(plotY), tempGenes$name2[j], adj=textAdj, cex=.8)
+      }
+    }
+  }
+}
