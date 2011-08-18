@@ -30,3 +30,28 @@ extractSeg <- function (segResult, minMark, cutoff=NULL, higher=c('higher', 'low
 
 }
 
+getSegCount <- function (segFrame, originalFrame) {
+  
+  # Count segments per tumor, separated by groups in the group variable in the dataframes
+  
+  segCount <- as.data.frame(table(segFrame$ID, segFrame$group), stringsAsFactors=F)
+  segCount <- segCount[-which(segCount$Freq == 0),]
+  colnames(segCount) <- c('TumorID','group', 'NumSeg')
+  
+  # Add missing tumor IDs
+  
+  AllID <- unique(originalFrame$ID)
+  
+  missingID <- which(!(AllID %in% segFrame$ID))
+  
+  for (m in missingID) {
+      rowInsert <- data.frame(TumorID=AllID[m], 
+        group=originalFrame$group[originalFrame$ID==AllID[m]][1], 
+        NumSeg=0)
+      segCount <- rbind(segCount, rowInsert)    
+  }
+  
+  
+  return(segCount)
+
+}
