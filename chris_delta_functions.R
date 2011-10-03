@@ -6,7 +6,7 @@
 #              analyses of CGH profiles
 # -------------------------------------------------------------------
 
-deltaMakeDiff <- function(KC, sampleCombs) {
+deltaQuant <- function(KC, sampleCombs) {
   
   # This function returns delta profiles
   # First it does quantile normalization on the KC data frame 
@@ -38,4 +38,32 @@ deltaMakeDiff <- function(KC, sampleCombs) {
   
 
 
+}
+
+deltaLinear <- function(comb, KC, KCseg, thres=.2) {
+  
+  # This function calculates delta profiles based on robust 
+  # linear regression. Inputs are:
+  # comb - vector of two column numbers to compare
+  # KC - KC data frame of the data
+  # KCseg - segmented version of the KC data frame
+  # thres - threshold on which to select the segments to use
+  #         for linear regression (over/under values)
+
+  require(robustbase)
+  require(DNAcopy)
+    
+  smallKC <- KC[,c('chrom', 'maploc', comb)]
+  smallSeg <- subset(KCseg, samplelist=comb)
+  smallFreq <- glFrequency(smallSeg, thres)
+  
+  # Select only those probes that exceed the threshold for either gains or losses
+  ind <- smallFreq$gain == 1 | smallFreq$loss == -1
+  
+  fitrob <- lmrob(smallKC[ind,4] ~ smallKC[ind,3])
+  
+  diffNorm <- (smallKC[,3] + coefficients(fitrob)[[1]]) * coefficients(fitrob)[[2]] - smallKC[,4]
+  
+  return(diffNorm)
+  
 }
