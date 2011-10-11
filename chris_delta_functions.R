@@ -34,21 +34,20 @@ deltaQuant <- function(KC, sampleCombs) {
   
   
   }
-  
-  
-
-
 }
 
 deltaLinear <- function(comb, KC, KCseg, thres=.2) {
   
   # This function calculates delta profiles based on robust 
   # linear regression. Inputs are:
-  # comb - vector of two column numbers to compare
+  # comb - vector of two column names to compare
   # KC - KC data frame of the data
   # KCseg - segmented version of the KC data frame
   # thres - threshold on which to select the segments to use
   #         for linear regression (over/under values)
+  #
+  # important: column 4 will be subtracted from column 3,
+  # so the metastasis sample will have to be in column 4
 
   require(robustbase)
   require(DNAcopy)
