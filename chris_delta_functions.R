@@ -61,8 +61,67 @@ deltaLinear <- function(comb, KC, KCseg, thres=.2) {
   
   fitrob <- lmrob(smallKC[ind,4] ~ smallKC[ind,3])
   
-  diffNorm <- (smallKC[,3] + coefficients(fitrob)[[1]]) * coefficients(fitrob)[[2]] - smallKC[,4]
+  diffNorm <- (smallKC[,3] + coef(fitrob)[[1]]) * coef(fitrob)[[2]] - smallKC[,4]
   
   return(diffNorm)
   
+}
+
+deltaLinearSeg <- function(comb, KC, KCseg, thres=.2) {
+  
+  # This function calculates delta profiles based on robust 
+  # linear regression. 
+  # This variant first segments the data and sets probevalues
+  # to their segment means. These probes are then used to
+  # correct for tumor content and to cacluate the difference
+  # The delta profile is immediately a segmented profile.
+  #
+  # Inputs are:
+  # comb - vector of two column names to compare
+  # KC - KC data frame of the data
+  # KCseg - segmented version of the KC data frame
+  # thres - threshold on which to select the segments to use
+  #         for linear regression (over/under values)
+  #
+  # important: column 4 will be subtracted from column 3,
+  # so the metastasis sample will have to be in column 4
+
+  require(robustbase)
+  require(DNAcopy)
+  
+  smallKC <- KC[,c('chrom', 'maploc', comb)]
+  smallSeg <- subset(KCseg, samplelist=comb)
+
+  segOutput <- smallSeg$output
+  segKC <- setProbeToSeg(smallKC, smallSeg)
+
+  # Select only those probes that exceed the threshold for either gains or losses
+  ind <- abs(segKC[,3]) > .2 & abs(segKC[,4]) > .2
+  lmfit <- lm(segKC[ind,4] ~ segKC[ind,3])
+  
+  diffNorm <- (segKC[,3] + coef(lmfit)[[1]]) * coef(lmfit)[[2]] - segKC[,4]
+  
+  return(diffNorm)
+  
+}
+
+setProbeToSeg <- function (KC, KCseg) {
+  
+  # Function to set probe values to their calculated segments
+  # ID in KCseg$output must be equal to the colnames in KC
+    
+  segOutput <- KCseg$output
+  segProbeKC <- KC
+
+  for (i in 1:nrow(segOutput)) {
+    probesInSeg <- with(segOutput, segProbeKC$chrom == chrom[i] & 
+      segProbeKC$maploc >= loc.start[i] &
+      segProbeKC$maploc < loc.end[i])
+
+    segProbeKC[probesInSeg, segOutput$ID[i]] <- 
+      segOutput$seg.mean[i]
+  }
+
+  return(segProbeKC)
+
 }
