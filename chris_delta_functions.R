@@ -15,7 +15,8 @@ deltaQuant <- function(KC, sampleCombs) {
   # chrom and maploc columns
   
   # Args: KC - KC data frame with 1st col = chrom, 2nd col = maploc, rest of the cols are log2 sampledata
-  #       sampleCombs - integer matrix with two colums, each row is a comparison to be done 
+  #       sampleCombs - matrix/data.frame of column numbers or names. First entry 
+  #                     is subtracted from the second.
   
   # To Do:
   # - input checking
@@ -29,11 +30,17 @@ deltaQuant <- function(KC, sampleCombs) {
   KCnorm <- KC
   KCnorm[,3:ncol(KCnorm)] <- dataMatrix
   
+  KCdiff <- KCnorm[, c(1,2)]
+
   for (i in 1:nrow(sampleCombs)) {
-  
-  
-  
+    KCdiff$temp <- KCnorm[,sampleCombs[i, 1]] - 
+      KCnorm[,sampleCombs[i, 2]]
+    newColName <- paste(sampleCombs[i,], collapse='-')
+    colnames(KCdiff) <- gsub('temp', newColName, colnames(KCdiff))
   }
+
+  return(KCdiff)
+
 }
 
 deltaLinear <- function(comb, KC, KCseg, thres=.2) {
